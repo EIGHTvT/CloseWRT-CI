@@ -11,7 +11,10 @@ sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $WRT_MARK-$WRT_DATE')/g" $(find .
 
 WIFI_FILE="./package/mtk/applications/mtwifi-cfg/files/mtwifi.sh"
 #修改WIFI名称
+$WRT_SSID
 sed -i "s/ImmortalWrt/$WRT_SSID/g" $WIFI_FILE
+sed -i "s/$WRT_SSID-2.4G/$WRT_SSID/g" $WIFI_FILE
+sed -i "s/$WRT_SSID-5G/${WRT_SSID}_5G/g" $WIFI_FILE
 #修改WIFI加密
 sed -i "s/encryption=.*/encryption='psk2+ccmp'/g" $WIFI_FILE
 #修改WIFI密码
