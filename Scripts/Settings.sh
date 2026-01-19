@@ -28,23 +28,27 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 #修改默认主机名
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
-#核心修正：解决网页升级校验报错
+#核心修正：解决网页升级校验报错 (安全对齐版)
 MK_FILE="target/linux/mediatek/image/filogic.mk"
-DTS_DIR="target/linux/mediatek/dts"
 
 if [ -f "$MK_FILE" ]; then
-    echo "正在执行设备 ID 匹配修正..."
-    # 物理复制 DTS (解决 No rule to make target 报错)
-    # 加上 -f 确保如果文件已存在也能强制覆盖
-    if [ -f "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" ]; then
-        cp -f "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc.dts"
+    echo "正在修正设备支持列表..."
+    
+    # 1. 检查是否已经存在 SUPPORTED_DEVICES 这一行
+    if grep -q "Device/cmcc_rax3000m-emmc-mtk" "$MK_FILE" && grep -q "SUPPORTED_DEVICES" "$MK_FILE"; then
+        # 如果有这一行，直接在末尾追加
+        sed -i '/cmcc_rax3000m-emmc-mtk/,/endef/ s/SUPPORTED_DEVICES.*/& cmcc,rax3000m-emmc/' "$MK_FILE"
+    else
+        # 如果没有这一行，在 DEVICE_DTS 后面插入新行
+        # 注意：这里使用单个反斜杠转义，确保在 Makefile 中有正确的缩进
+        sed -i '/DEVICE_DTS := mt7981b-cmcc-rax3000m-emmc-mtk/a \  SUPPORTED_DEVICES += cmcc,rax3000m-emmc' "$MK_FILE"
     fi
-
-    # 替换 Makefile 中的标识符
-    # 这一步会将生成的固件内部文件夹名改为 cmcc,rax3000m-emmc
-    sed -i 's/cmcc_rax3000m-emmc-mtk/cmcc,rax3000m-emmc/g' $MK_FILE
-    sed -i 's/mt7981b-cmcc-rax3000m-emmc-mtk/mt7981b-cmcc-rax3000m-emmc/g' $MK_FILE
+    
+    echo "修正完成，当前配置预览："
+    grep -A 5 "Device/cmcc_rax3000m-emmc-mtk" "$MK_FILE"
 fi
+
+
 
 #配置文件修改
 echo "CONFIG_PACKAGE_luci=y" >> ./.config
