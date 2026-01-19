@@ -28,18 +28,16 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 #修改默认主机名
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
-# 核心修正：解决网页升级校验报错 (终极方案)
+# 核心修正：解决网页升级校验报错
 MK_FILE="target/linux/mediatek/image/filogic.mk"
-
-# 1. 确保 Device 定义名不带逗号 (保证编译通过)
-# 2. 直接在 Device/cmcc_rax3000m-emmc-mtk 下方的第一行强制插入支持列表
-# 注意：这里使用了特殊的 \t 处理，以匹配 Makefile 的缩进要求
-sed -i '/Device\/cmcc_rax3000m-emmc-mtk/a \\tSUPPORTED_DEVICES += cmcc,rax3000m-emmc' "$MK_FILE"
-
-# 3. 如果编译依然报 target-dir- 错误，说明你之前的 sed 已经弄乱了文件
-# 我们可以执行一次还原（可选，预防万一）
-sed -i 's/Device\/cmcc,rax3000m-emmc/Device\/cmcc_rax3000m-emmc-mtk/g' "$MK_FILE"
-
+if [ -f "$MK_FILE" ]; then
+    echo "正在执行设备 ID 匹配修正..."
+    # 清除可能存在的旧修改，防止重复运行导致语法错
+    sed -i '/SUPPORTED_DEVICES += cmcc,rax3000m-emmc/d' "$MK_FILE"
+    
+    # 核心逻辑：在 Device 定义块内精准插入。使用 \t 确保符合 Makefile 制表符要求
+    # 我们匹配定义行，然后在它后面插入一行支持设备
+    sed -i '/Device\/cmcc_rax3000m-emmc-mtk/a \\tSUPPORTED_DEVICES += cmcc,rax3000m-emmc' "$MK_FILE"
     
     echo "修正完成，当前配置预览："
     grep -A 5 "Device/cmcc_rax3000m-emmc-mtk" "$MK_FILE"
