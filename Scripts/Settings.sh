@@ -27,11 +27,13 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 #修改默认主机名
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
-# 修正固件 ID 命名冲突，解决网页端升级报错 "invalid sysupgrade file"
-# 原因：内核识别 ID 为 "cmcc,rax3000m-emmc" (带逗号)
-# 但源码打包定义的 ID 为 "cmcc_rax3000m-emmc-mtk" (下划线+mtk)
-# 此操作将两者对齐，使网页端校验能够通过
-sed -i 's/cmcc_rax3000m-emmc-mtk/cmcc,rax3000m-emmc/g' target/linux/mediatek/image/filogic.mk
+# 修正设备 ID 冲突 (解决 Image check failed 报错)
+# 只精准修改设备定义 ID 和目标列表，不改 DTS 文件名，确保编译不报错
+MK_FILE="target/linux/mediatek/image/filogic.mk"
+if [ -f "$MK_FILE" ]; then
+    sed -i 's/Device\/cmcc_rax3000m-emmc-mtk/Device\/cmcc,rax3000m-emmc/g' $MK_FILE
+    sed -i 's/TARGET_DEVICES += cmcc_rax3000m-emmc-mtk/TARGET_DEVICES += cmcc,rax3000m-emmc/g' $MK_FILE
+fi
 
 #配置文件修改
 echo "CONFIG_PACKAGE_luci=y" >> ./.config
