@@ -27,13 +27,22 @@ sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $CFG_FILE
 #修改默认主机名
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 
-# 修正 ID 冲突，解决网页升级报错 (最稳妥方案)
-# 不改 Device/ 后面的定义名，只在镜像生成时强制注入支持列表
+#核心修正：解决网页升级校验报错
 MK_FILE="target/linux/mediatek/image/filogic.mk"
+DTS_DIR="target/linux/mediatek/dts"
+
 if [ -f "$MK_FILE" ]; then
-    # 在该设备的定义块中，确保包含路由器内核认账的逗号 ID
-    # 这一步是为了让生成的 metadata 包含 cmcc,rax3000m-emmc
-    sed -i '/cmcc_rax3000m-emmc-mtk/,/endef/ { /SUPPORTED_DEVICES/ s/$/ cmcc,rax3000m-emmc/ }' $MK_FILE
+    echo "正在修正设备 ID 冲突..."
+    #复制一份不带 -mtk 后缀的 DTS 文件，防止编译找不到目标
+    if [ -f "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" ]; then
+        cp "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc-mtk.dts" "$DTS_DIR/mt7981b-cmcc-rax3000m-emmc.dts"
+    fi
+
+    #精准替换 Makefile 中的设备定义
+    #把设备名从 cmcc_rax3000m-emmc-mtk 统一改为 cmcc,rax3000m-emmc (逗号版)
+    #同时把使用的 DTS 指向我们刚才复制的新文件
+    sed -i 's/cmcc_rax3000m-emmc-mtk/cmcc,rax3000m-emmc/g' $MK_FILE
+    sed -i 's/mt7981b-cmcc-rax3000m-emmc-mtk/mt7981b-cmcc-rax3000m-emmc/g' $MK_FILE
 fi
 
 #配置文件修改
